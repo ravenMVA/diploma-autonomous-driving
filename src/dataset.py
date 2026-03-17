@@ -293,11 +293,11 @@ def load_samples_from_csv(csv_path: str, data_dir: str = "") -> list:
         # Формируем пути к изображениям
         def resolve_path(raw_path):
             raw_path = str(raw_path).strip()
-            if data_dir and not os.path.isabs(raw_path):
-                # Берём только имя файла и ищем в data_dir/IMG/
-                filename = os.path.basename(raw_path)
+            # Берём только имя файла, поддерживаем Windows-пути (\ как разделитель)
+            filename = raw_path.replace('\\', '/').split('/')[-1]
+            if data_dir:
                 return os.path.join(data_dir, "IMG", filename)
-            return raw_path
+            return os.path.join(os.path.dirname(raw_path), filename)
 
         center_path = resolve_path(row["center"])
         left_path   = resolve_path(row["left"])
