@@ -228,7 +228,7 @@ def train(
 
     # Планировщик: уменьшает lr в 2 раза если val_loss не улучшается 5 эпох
     scheduler = ReduceLROnPlateau(optimizer, mode="min", factor=0.5,
-                                   patience=5, verbose=True)
+                                   patience=5)
 
     # EarlyStopping
     early_stopping = EarlyStopping(patience=patience, save_path=save_path)

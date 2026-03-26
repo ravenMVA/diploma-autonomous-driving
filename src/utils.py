@@ -110,7 +110,7 @@ def load_model(model, path: str, device: str = "cpu"):
     if not os.path.exists(path):
         raise FileNotFoundError(f"Файл модели не найден: {path}")
 
-    checkpoint = torch.load(path, map_location=device)
+    checkpoint = torch.load(path, map_location=device, weights_only=False)
 
     # Поддержка двух форматов сохранения
     if isinstance(checkpoint, dict) and "model_state_dict" in checkpoint:

@@ -343,7 +343,7 @@ if __name__ == "__main__":
     )
 
     model = get_model(device=device)
-    model.load_state_dict(torch.load(model_path, map_location=device))
+    model.load_state_dict(torch.load(model_path, map_location=device, weights_only=False))
     print(f"Модель загружена: {model_path}")
 
     evaluate(model, test_loader, device, save_dir=".")
