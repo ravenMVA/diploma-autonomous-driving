@@ -76,6 +76,17 @@ def load_and_cache(csv_path: str, images_dir: str, cache_path: str) -> tuple:
 
     images_dir = Path(images_dir)
     images_list, angles_list = [], []
+    skipped = 0
+
+    # Диагностика путей по первым 3 строкам
+    for _, row in sampled.head(3).iterrows():
+        raw = Path(row["img_path"].strip())
+        cands = [images_dir / raw, images_dir / raw.name, images_dir / "IMG" / raw.name]
+        if raw.is_absolute():
+            cands.insert(0, raw)
+        found = [str(p) for p in cands if p.exists()]
+        print(f"[DIAG] CSV путь: {row['img_path'].strip()!r}")
+        print(f"       Найдено: {found if found else 'НЕТ — проверь images_dir!'}")
 
     for _, row in sampled.iterrows():
         raw = Path(row["img_path"].strip())
@@ -91,6 +102,7 @@ def load_and_cache(csv_path: str, images_dir: str, cache_path: str) -> tuple:
         img_file = next((p for p in candidates if p.exists()), candidates[0])
         img = cv2.imread(str(img_file))
         if img is None:
+            skipped += 1
             continue
         proc = preprocess_image(img)
         images_list.append(proc[np.newaxis, :, :])   # (1, H, W)
@@ -98,6 +110,13 @@ def load_and_cache(csv_path: str, images_dir: str, cache_path: str) -> tuple:
 
     images = np.array(images_list, dtype=np.float32)
     angles = np.array(angles_list, dtype=np.float32)
+
+    print(f"Загружено: {len(images_list)} / {len(sampled)}  (пропущено: {skipped})")
+    if len(images_list) == 0:
+        raise RuntimeError(
+            "Ни одно изображение не загрузилось! "
+            "Проверь [DIAG] выше — images_dir не совпадает с реальным путём к IMG."
+        )
 
     cache_path.parent.mkdir(parents=True, exist_ok=True)
     np.save(cache_path, {"images": images, "angles": angles})
