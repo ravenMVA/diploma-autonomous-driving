@@ -43,8 +43,11 @@ def load_and_cache(csv_path: str, images_dir: str, cache_path: str) -> tuple:
     cache_path = Path(cache_path)
     if cache_path.exists():
         print(f"Загружаю кэш из {cache_path}...")
-        data = np.load(cache_path, allow_pickle=True).item()
-        return data["images"], data["angles"]
+        data = np.load(cache_path, allow_pickle=True).item()  # noqa: S301 — собственные данные проекта
+        if len(data["images"]) > 0:
+            return data["images"], data["angles"]
+        print("Кэш пуст, пересоздаю...")
+        cache_path.unlink()
 
     print("Кэш не найден, создаю...")
     df = pd.read_csv(csv_path)
@@ -75,9 +78,17 @@ def load_and_cache(csv_path: str, images_dir: str, cache_path: str) -> tuple:
     images_list, angles_list = [], []
 
     for _, row in sampled.iterrows():
-        img_file = Path(row["img_path"].strip())
-        if not img_file.is_absolute():
-            img_file = images_dir / img_file.name
+        raw = Path(row["img_path"].strip())
+        # Перебираем кандидатов: полный относительный путь, только имя файла,
+        # подпапка IMG/ — Udacity CSV хранит пути вида "IMG/center_xxx.jpg"
+        candidates = [
+            images_dir / raw,
+            images_dir / raw.name,
+            images_dir / "IMG" / raw.name,
+        ]
+        if raw.is_absolute():
+            candidates.insert(0, raw)
+        img_file = next((p for p in candidates if p.exists()), candidates[0])
         img = cv2.imread(str(img_file))
         if img is None:
             continue
