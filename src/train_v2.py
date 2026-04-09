@@ -3,6 +3,7 @@ train_v2.py — Обучение LaneCNN.
 
 Быстро: 20 эпох на 3k сэмплах ≈ 10-15 минут на T4.
 Данные загружаются из .npy кэша — никаких дисковых операций при обучении.
+Обновлён: 2026-04-10 00:05 МСК
 """
 
 import time
@@ -28,7 +29,7 @@ def train(model, train_loader, val_loader,
     """
     model = model.to(device)
     optimizer = Adam(model.parameters(), lr=lr, weight_decay=1e-4)
-    scheduler = ReduceLROnPlateau(optimizer, factor=0.5, patience=3, verbose=True)
+    scheduler = ReduceLROnPlateau(optimizer, factor=0.5, patience=3)
     criterion = nn.MSELoss()
 
     history = {"train_loss": [], "val_loss": []}
