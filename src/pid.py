@@ -1,5 +1,6 @@
 """
 pid.py — ПИД-регулятор для стабилизации агента в полосе.
+Обновлён: 2026-04-10 00:20 МСК
 
 Роль в системе:
     Нейросеть (чёрный ящик) предсказывает ошибку отклонения e ∈ [-1, 1].
@@ -74,10 +75,10 @@ class PIDController:
         return self._history
 
     def integral_error(self) -> float:
-        """Интегральная ошибка за эпизод (Cross-Track Error)."""
+        """Интегральная ошибка за эпизод по управляющему сигналу u(t)."""
         if not self._history:
             return float("inf")
-        return float(np.mean([abs(h["e"]) for h in self._history]))
+        return float(np.mean([abs(h["u"]) for h in self._history]))
 
 
 def tune_pid(errors: np.ndarray, kp_range=(0.1, 2.0), ki_range=(0.0, 0.1),

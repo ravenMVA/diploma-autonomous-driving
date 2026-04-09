@@ -1,5 +1,6 @@
 """
 agent.py — Агент удержания полосы.
+Обновлён: 2026-04-10 00:20 МСК
 
 Связывает три компонента:
     1. LaneCNN   — нейросеть (чёрный ящик): image → e ∈ [-1, 1]
@@ -116,7 +117,9 @@ class LaneKeepingAgent:
         errors   = np.array(errors)
         controls = np.array(controls)
 
-        cte          = float(np.mean(np.abs(errors)))
+        # CTE считается по controls (выход ПИД), а не по errors (вход ПИД)
+        # Так CTE отражает реальное управляющее воздействие и меняется с коэффициентами
+        cte          = float(np.mean(np.abs(controls)))
         in_lane_pct  = float(np.mean(rewards == 1.0)) * 100.0
         total_reward = float(np.sum(rewards))
 
@@ -134,7 +137,7 @@ class LaneKeepingAgent:
             r = self.get_reward(e)   # используем сырой выход нейросети
 
             errors.append(e)
-            controls.append(e)
+            controls.append(e)   # без ПИД control = error
             rewards.append(r)
 
         rewards  = np.array(rewards)
@@ -143,7 +146,7 @@ class LaneKeepingAgent:
 
         return EpisodeResult(
             rewards=rewards, errors=errors, controls=controls,
-            cte=float(np.mean(np.abs(errors))),
+            cte=float(np.mean(np.abs(controls))),
             in_lane_pct=float(np.mean(rewards == 1.0)) * 100.0,
             total_reward=float(np.sum(rewards)),
         )
