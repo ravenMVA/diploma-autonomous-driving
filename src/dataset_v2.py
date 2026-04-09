@@ -1,6 +1,7 @@
 """
 dataset_v2.py — Загрузка данных Udacity, стратифицированная выборка 3k сэмплов,
 кэширование в .npy для мгновенной загрузки при обучении.
+Обновлён: 2026-04-09 22:51 МСК
 """
 
 import os
@@ -78,27 +79,32 @@ def load_and_cache(csv_path: str, images_dir: str, cache_path: str) -> tuple:
     images_list, angles_list = [], []
     skipped = 0
 
-    # Диагностика путей по первым 3 строкам
-    for _, row in sampled.head(3).iterrows():
-        raw = Path(row["img_path"].strip())
-        cands = [images_dir / raw, images_dir / raw.name, images_dir / "IMG" / raw.name]
-        if raw.is_absolute():
-            cands.insert(0, raw)
-        found = [str(p) for p in cands if p.exists()]
-        print(f"[DIAG] CSV путь: {row['img_path'].strip()!r}")
-        print(f"       Найдено: {found if found else 'НЕТ — проверь images_dir!'}")
-
-    for _, row in sampled.iterrows():
-        raw = Path(row["img_path"].strip())
-        # Перебираем кандидатов: полный относительный путь, только имя файла,
-        # подпапка IMG/ — Udacity CSV хранит пути вида "IMG/center_xxx.jpg"
-        candidates = [
-            images_dir / raw,
-            images_dir / raw.name,
-            images_dir / "IMG" / raw.name,
+    def _resolve_img_path(raw_str: str, images_dir: Path) -> list:
+        """Строит список кандидатов с учётом Windows-путей (обратный слеш)."""
+        raw_str = raw_str.strip()
+        # Извлекаем имя файла, поддерживая оба вида слешей
+        fname = raw_str.replace("\\", "/").split("/")[-1]
+        raw = Path(raw_str)
+        cands = [
+            images_dir / raw,           # как есть
+            images_dir / fname,         # только имя файла (слеши любые)
+            images_dir / "IMG" / fname, # подпапка IMG/
         ]
         if raw.is_absolute():
-            candidates.insert(0, raw)
+            cands.insert(0, raw)
+        return cands, fname
+
+    # Диагностика путей по первым 3 строкам
+    for _, row in sampled.head(3).iterrows():
+        cands, fname = _resolve_img_path(row["img_path"], images_dir)
+        found = [str(p) for p in cands if p.exists()]
+        print(f"[DIAG] CSV путь: {row['img_path'].strip()!r}  →  fname={fname!r}")
+        print(f"       Найдено: {found if found else 'НЕТ — проверь images_dir!'}")
+        for c in cands:
+            print(f"         {'OK' if c.exists() else 'xx'} {c}")
+
+    for _, row in sampled.iterrows():
+        candidates, _ = _resolve_img_path(row["img_path"], images_dir)
         img_file = next((p for p in candidates if p.exists()), candidates[0])
         img = cv2.imread(str(img_file))
         if img is None:
