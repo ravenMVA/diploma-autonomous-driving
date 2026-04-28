@@ -3,6 +3,8 @@ model_v2.py — Лёгкая CNN (~37k параметров) для оценки
 
 Вход:  (B, 1, 32, 100) — grayscale изображение
 Выход: (B, 1)          — ошибка отклонения e ∈ [-1, 1]
+
+Обновлён: 2026-04-28 МСК
 """
 
 import torch
@@ -67,3 +69,41 @@ def build_model(device: str = "cpu") -> LaneCNN:
     n = count_parameters(model)
     print(f"LaneCNN: {n:,} обучаемых параметров")
     return model
+
+
+class LaneCNNClassifier(nn.Module):
+    """
+    Бинарный классификатор: Sigmoid вместо Tanh.
+    Выход: вероятность "в полосе" p в [0, 1].
+    Используется только для сравнительного эксперимента BCE vs MSE.
+    Обновлён: 2026-04-28 МСК
+    """
+
+    def __init__(self):
+        super().__init__()
+        self.features = nn.Sequential(
+            nn.Conv2d(1, 8, kernel_size=3, stride=2, padding=1),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(2),
+            nn.Conv2d(8, 16, kernel_size=3, stride=1, padding=1),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(2),
+        )
+        self._flat_size = self._get_flat_size()
+        self.classifier = nn.Sequential(
+            nn.Linear(self._flat_size, 64),
+            nn.ReLU(inplace=True),
+            nn.Dropout(0.3),
+            nn.Linear(64, 1),
+            nn.Sigmoid(),
+        )
+
+    def _get_flat_size(self) -> int:
+        with torch.no_grad():
+            dummy = torch.zeros(1, 1, 32, 100)
+            return int(self.features(dummy).numel())
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        x = self.features(x)
+        x = x.view(x.size(0), -1)
+        return self.classifier(x)
